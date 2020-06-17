@@ -27,12 +27,12 @@ class RandomFlip(object):
     def __call__(self, img, gt):
         assert gt is not None
         if random.random() < 0.5:
-            img = np.copy(np.fliplr(img))
-            gt = np.copy(np.fliplr(gt))
+            img = func.hflip(img)
+            gt = func.hflip(gt)
         
         if random.random()<0.5:
-            img = np.copy(np.flipud(img))
-            gt = np.copy(np.flipud(gt))
+            img = func.vflip(img)
+            gt = func.hflip(gt)
 
         return img, gt
 
@@ -52,8 +52,8 @@ class RandomRotate(object):
 class RandomCrop(transforms.RandomResizedCrop):
 
     def __init__(self, size, scale=(0.08, 1.0), 
-            ratio=(3. / 4., 4. / 3.), interpolation=Image.BILINEAR):
-        super().__init__(RandomCrop)
+            ratio=(3. / 4., 4. / 3.)):
+        super(RandomCrop,self).__init__(size,scale,ratio)
         
     def __call__(self, img, gt):
         i,j,h,w=self.get_params(img,self.scale,self.ratio)
@@ -62,11 +62,21 @@ class RandomCrop(transforms.RandomResizedCrop):
         return img, gt
 
 
+class Scale(object):
+    def __init__(self, size):
+        self.size=size
+    def __call__(self, img, gt):
+        img=func.resize(img,self.size)
+        gt=func.resize(gt,self.size)
+        return img,gt
+
+
 class ToTensor(object):
 
     def __call__(self, img, gt):
         img=func.to_tensor(img)
         gt=func.to_tensor(gt)
+        # print(gt.max())
         return img,gt
 
 

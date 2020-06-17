@@ -2,6 +2,12 @@ import torch
 import torch.nn as nn
 from torchvision.models.utils import load_state_dict_from_url
 
+
+__all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
+           'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
+           'wide_resnet50_2', 'wide_resnet101_2']
+
+
 model_urls = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
     'resnet34': 'https://download.pytorch.org/models/resnet34-333f7ec4.pth',
@@ -38,7 +44,6 @@ class BasicBlock(nn.Module):
             raise ValueError('BasicBlock only supports groups=1 and base_width=64')
         if dilation > 1:
             raise NotImplementedError("Dilation > 1 not supported in BasicBlock")
-        
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = norm_layer(planes)
@@ -73,10 +78,8 @@ class Bottleneck(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
                  base_width=64, dilation=1, norm_layer=None):
         super(Bottleneck, self).__init__()
-
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
-            
         width = int(planes * (base_width / 64.)) * groups
         # Both self.conv2 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv1x1(inplanes, width)
@@ -111,22 +114,18 @@ class Bottleneck(nn.Module):
 
         return out
 
-
 class ResNet(nn.Module):
 
     def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
-                 norm_layer=None, 
-                 no_top=False, # added to skip the fc layer
-                 input_channels=3, # added to adapt to multi-images scenario
-                 ):
+                 norm_layer=None,no_top=False):
 
         super(ResNet, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         self._norm_layer = norm_layer
         self.no_top = no_top # added to overlook the fc layers
-        self.input_channels=input_channels
+        self.input_channels=3
         self.inplanes = 64
         self.dilation = 1
         if replace_stride_with_dilation is None:
@@ -167,6 +166,7 @@ class ResNet(nn.Module):
         # Zero-initialize the last BN in each residual branch,
         # so that the residual branch starts with zeros, and each residual block behaves like an identity.
         # This improves the model by 0.2~0.3% according to https://arxiv.org/abs/1706.02677
+
         if zero_init_residual:
             for m in self.modules():
                 if isinstance(m, Bottleneck):
@@ -218,12 +218,8 @@ class ResNet(nn.Module):
             return [x,f1,f2,f3,f4]
 
 
-def _resnet(arch, block, layers, pretrained, progress, input_channels, pretrain_encoder, **kwargs):
-    model = ResNet(block, layers,input_channels=input_channels, **kwargs)
-    if pretrained:
-        # state_dict = load_state_dict_from_url(pretrain_encoder,progress=progress)
-        state_dict = torch.load(pretrain_encoder)
-        model.load_state_dict(state_dict,strict=False)
+def _resnet(arch, block, layers, progress, **kwargs):
+    model = ResNet(block, layers, **kwargs)
     return model
 
 
@@ -237,7 +233,7 @@ def resnext50_32x4d(input_channels=3, pretrained=False, progress=True, **kwargs)
     return _resnet('resnext50_32x4d', Bottleneck, [3, 4, 6, 3],
                    pretrained, progress, input_channels, **kwargs)
 
-def resnet18(pretrained=False, progress=True, **kwargs):
+def resnet18(progress=True, **kwargs):
     r"""ResNet-18 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
 
@@ -245,5 +241,5 @@ def resnet18(pretrained=False, progress=True, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
+    return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], progress,
                    **kwargs)

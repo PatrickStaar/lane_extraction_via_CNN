@@ -1,16 +1,18 @@
 import torch
 from tqdm import tqdm
-from utils import criterion
+from utils import iou_loss
 
 
-def eval(network, optimizer, dataloader,device):
+def eval(network, dataloader,device):
     network.eval()
     loss_per_epoch=0
-    for i,img,gt in tqdm(enumerate(dataloader)):
+    for i,data in tqdm(enumerate(dataloader)):
+        img,gt=data
         img=img.to(device)
         gt=gt.to(device)
         pred=network(img)
-        loss=criterion(pred,gt)
-        loss_per_epoch+=loss.detach().cpu().item()
+        #loss=criterion(pred,gt)
+        loss=iou_loss(pred,gt)
+        loss_per_epoch+=loss.detach_().cpu().item()
 
     return loss_per_epoch/len(dataloader)

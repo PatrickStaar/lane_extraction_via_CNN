@@ -1,12 +1,12 @@
 import torchvision
 from torch.utils.data import Dataset
 import os
-import cv2
+from PIL import Image
 import numpy as np
 
 class Data(Dataset):
     def __init__(self,root,training=True,transform=None):
-        super().__init__(Data)
+        super().__init__()
 
         self.training=training
         self.root=root
@@ -16,12 +16,12 @@ class Data(Dataset):
 
     def __getitem__(self, index):
         img,gt=self.items[index].split()
-        img = self.load_as_float(os.path.join(self.root,img))
-        gt = self.load_as_float(os.path.join(self.root,gt))
+        img = Image.open(os.path.join(self.root,img))
+        gt = Image.open(os.path.join(self.root,gt))
         if self.transform is not None:
             img,gt=self.transform([img,gt])
 
-        return (img,gt)
+        return [img,gt]
 
 
     def __len__(self):
@@ -30,7 +30,7 @@ class Data(Dataset):
     
     def extract(self):
         file=os.path.join(self.root,'train.txt') \
-            if self.training else os.path.join(self.root,'val.txt')
+            if self.training else os.path.join(self.root,'valid.txt')
 
         items=[]
         with open(file,'r') as f:
@@ -38,8 +38,3 @@ class Data(Dataset):
                 items.append(i.strip('\n'))
         return items
     
-    def load_as_float(self,dir):
-        img=cv2.imread(dir)
-        if img.shape[-1]==3:
-            img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
-        return img
