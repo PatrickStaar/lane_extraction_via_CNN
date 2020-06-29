@@ -32,7 +32,7 @@ class RandomFlip(object):
         
         if random.random()<0.5:
             img = func.vflip(img)
-            gt = func.hflip(gt)
+            gt = func.vflip(gt)
 
         return img, gt
 
@@ -76,7 +76,7 @@ class ToTensor(object):
     def __call__(self, img, gt):
         img=func.to_tensor(img)
         gt=func.to_tensor(gt)
-        # print(gt.max())
+        # print(gt.max())iu 
         return img,gt
 
 

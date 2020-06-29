@@ -7,7 +7,7 @@ from train import train
 from eval import eval
 from transform import *
 from logger import get_logger
-from utils import get_time
+from utils import get_time, iou_loss
 from tqdm import tqdm
 from PIL import Image
 
@@ -19,12 +19,16 @@ SEED = 100000
 DATA_DIR='./dataset/mass_roads'
 CHECKPOINTS_DIR='./checkpoints'
 LOG_DIR='./log'
+OUTPUT_DIR='./outputs_iou'
+
+if not os.path.exists(OUTPUT_DIR):
+    os.mkdir(OUTPUT_DIR)
 
 def main():
     log=get_logger(LOG_DIR)
 
     transform_val=Compose([
-        Scale((480,480)),
+        Scale((224,224)),
         ToTensor(),
         Normalize(
             mean=[0.45,0.45,0.45],
@@ -43,22 +47,19 @@ def main():
     log.info('Val samples:{}'.format(len(val_loader)))
 
     # set device
-    if torch.cuda.is_available():
-        device = torch.device('cuda:0')
-        torch.cuda.manual_seed(SEED)
-    else:
-        device = torch.device('cpu')
-        torch.manual_seed(SEED)
+    device = torch.device('cpu')
+    # torch.manual_seed(SEED)
 
     log.info('Torch Device:{}'.format(device))
 
     # set model and optimizer
     net = FCNResNet()
     net.to(device)
-    net.init_weights()
+    # net.init_weights()
 
     # pretrained resnet weights 
-    net.load_state_dict(torch.load('./checkpoints/06.17.16.57.49_ep5.pt'),strict=False)
+    net.load_state_dict(torch.load(
+        './checkpoints/06.22.23.14.41_ep36_val.pt'),strict=False)
 
     log.info('Model loaded.')
 
@@ -67,9 +68,13 @@ def main():
         img=img.to(device)
         gt=gt.to(device)
         pred=net(img)
-        pred=pred.detach_().cpu().numpy().squeeze(0).squeeze(0)
+        iou=iou_loss(pred,gt)
+        pred[pred<0.5]=0
+        print(iou.detach_().item())
+        
+        pred=pred.detach_().numpy().squeeze(0).squeeze(0)
         pred=Image.fromarray((pred*255).astype(np.uint8))
-        pred.save('./outputs/%d.png'%i)
+        pred.save(f'{OUTPUT_DIR}/{i}.png')
 
 if __name__ == "__main__":
     main()

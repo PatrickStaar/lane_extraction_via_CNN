@@ -131,6 +131,6 @@ dmypy.json
 dataset/*
 pretrained/*
 log/*
-outputs/*
+outputs*
 checkpoints/*
 .vscode

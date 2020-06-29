@@ -14,5 +14,7 @@ def eval(network, dataloader,device):
         #loss=criterion(pred,gt)
         loss=iou_loss(pred,gt)
         loss_per_epoch+=loss.detach_().cpu().item()
-
-    return loss_per_epoch/len(dataloader)
+    loss_dict=dict(
+        loss=loss_per_epoch/len(dataloader)
+    )
+    return loss_dict

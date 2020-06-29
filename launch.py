@@ -7,14 +7,14 @@ from train import train
 from eval import eval
 from transform import *
 from logger import get_logger
-from utils import get_time
+from utils import get_time, get_info
+import time
 
 
-
-MAX_EPOCH=50
+MAX_EPOCH=40
 USE_PRETRAIN=True
 # set the same random seed
-SEED = 100000
+SEED = time.time()
 DATA_DIR='./dataset/mass_roads'
 CHECKPOINTS_DIR='./checkpoints'
 LOG_DIR='./log'
@@ -24,7 +24,7 @@ def main():
 
     transform_train=Compose([
         RandomFlip(),
-        # RandomRotate((0,180)),
+        RandomRotate((0,180)),
         RandomCrop((224,224),scale=(0.2,1.0)),
         ToTensor(),
         Normalize(
@@ -34,7 +34,7 @@ def main():
     ])
 
     transform_val=Compose([
-        Scale((480,480)),
+        Scale((224,224)),
         ToTensor(),
         Normalize(
             mean=[0.45,0.45,0.45],
@@ -46,7 +46,7 @@ def main():
     valset=Data(DATA_DIR,training=False,transform=transform_val)
 
     train_loader = DataLoader(
-        trainset,batch_size=8,shuffle=True,num_workers=2,pin_memory=True
+        trainset,batch_size=2,shuffle=True,num_workers=2,pin_memory=True
     )
     val_loader = DataLoader(
         valset,batch_size=1,num_workers=0
@@ -73,37 +73,37 @@ def main():
 
     # pretrained resnet weights 
     if USE_PRETRAIN:
-        net.load_state_dict(torch.load('./pretrained/resnet18-5c106cde.pth'),strict=False)
-    else:
-        net.init_weights()
+        net.load_state_dict(torch.load('./checkpoints/06.22.07.30.14_ep71.pt'),strict=False)
 
-    optimizer = torch.optim.Adam(net.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(net.parameters(), lr=1e-5)
+    # optimizer = torch.optim.SGD(net.parameters(),1e-4,momentum=0.9,)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,patience=2,factor=0.5,min_lr=1e-7,cooldown=1)
 
     log.info('Model loaded.')
 
 
-    min_loss = 1.
-    min_val_loss = 1.
+    min_loss = 1000.
+    min_val_loss = 1000.
         
     # 开始迭代   
     for epoch in range(MAX_EPOCH):
+        msg='Epoch-{} '.format(epoch+1)
         # set to train mode
         train_avg_loss = train(net, optimizer, train_loader, device)
-        scheduler.step(train_avg_loss)
+        scheduler.step(train_avg_loss['loss'])
         eval_avg_loss = eval(net, val_loader, device)
 
-        log.info('Epoch-{} Training Loss:{}'.format(epoch+1,train_avg_loss))
-        log.info('Epoch-{} Validation Loss:{}'.format(epoch+1,eval_avg_loss))
+        log.info(msg+get_info('Train:',train_avg_loss))
+        log.info(msg+get_info('Val:',eval_avg_loss))
         
-        if train_avg_loss < min_loss:
-            min_loss = train_avg_loss
+        if train_avg_loss['loss'] < min_loss:
+            min_loss = train_avg_loss['loss']
             filename = '{}_ep{}.pt'.format(get_time(), epoch+1)
             torch.save(net.state_dict(), f=os.path.join(CHECKPOINTS_DIR,filename))
 
-        elif eval_avg_loss < min_val_loss:
-            min_val_loss = eval_avg_loss
+        elif eval_avg_loss['loss'] < min_val_loss:
+            min_val_loss = eval_avg_loss['loss']
             filename = '{}_ep{}_val.pt'.format(get_time(), epoch+1)
             torch.save(net.state_dict(), f=os.path.join(CHECKPOINTS_DIR,filename))
         else:

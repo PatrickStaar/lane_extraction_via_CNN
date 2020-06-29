@@ -32,9 +32,7 @@ class FCNResNet(nn.Module):
         x=F.relu(x)
         x=self.deconv_4(x)
         x=F.relu(x)
-        x=self.deconv_5(x)
-        x=F.relu(x)
-        
+        x=self.deconv_5(x)       
         x=torch.sigmoid(x)
 
         return x
